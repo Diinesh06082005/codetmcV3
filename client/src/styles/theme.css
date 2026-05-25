@@ -1,0 +1,27 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+:root {
+  color-scheme: dark;
+  --page-bg: #000000;
+  --page-bg-soft: #1c1c1e;
+  --page-grid: rgba(255, 255, 255, 0.04);
+  --apple-blue: #0A84FF;
+  --apple-blue-glow: rgba(10, 132, 255, 0.15);
+}
+
+body {
+  background-color: var(--page-bg);
+  background-image: radial-gradient(circle at 50% -20%, var(--apple-blue-glow), transparent 60%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--page-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--page-grid) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 80%);
+}

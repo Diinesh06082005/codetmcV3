@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # MongoDB Database Service
+  mongodb:
+    image: mongo:7.0
+    container_name: codetmc-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - codetmc-network
+
+  # Node.js Express Backend Service
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: codetmc-server
+    restart: always
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/codetmc
+      - CLIENT_URL=http://localhost:8080
+      - JWT_SECRET=18ab1ce687956a8cc20e3fcdfe6890b488eced97bf5c6f329c331922aa85cc8d48b71373b49e0273c9f4024441cb114f07e222feb99d46b8264758fd5b51acb0
+      - JWT_EXPIRES_IN=7d
+      - BCRYPT_SALT_ROUNDS=10
+      - RATE_LIMIT_WINDOW_MS=60000
+      - RATE_LIMIT_MAX_REQUESTS=120
+      - AUTH_RATE_LIMIT_WINDOW_MS=900000
+      - AUTH_RATE_LIMIT_MAX_REQUESTS=20
+      - SOCKET_RATE_LIMIT_MAX_EVENTS=80
+      - AUTH_COOKIE_NAME=codetmc_session
+      - AUTH_COOKIE_MAX_AGE_MS=604800000
+      - ADMIN_USERNAME=adminnn
+      - ADMIN_EMAIL=dinesh@gmail.com
+      - ADMIN_PASSWORD=StrongPass123
+    depends_on:
+      - mongodb
+    networks:
+      - codetmc-network
+
+  # Vite/React Nginx Frontend Service
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        # Note: Since client JS runs in the user's browser, these URLs must point to
+        # the host's localhost (or domain), not the internal Docker network name.
+        - VITE_API_URL=http://localhost:5000
+        - VITE_SOCKET_URL=http://localhost:5000
+
+    container_name: codetmc-client
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+    networks:
+      - codetmc-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  codetmc-network:
+    driver: bridge

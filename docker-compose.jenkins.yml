@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    container_name: codetmc-jenkins
+    restart: always
+    ports:
+      - "8090:8080"      # Jenkins Web UI on host port 8090
+      - "50000:50000"    # Agent communication port
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock # Mount host Docker daemon socket
+    user: root           # Run as root inside container to ensure access to mounted docker.sock
+    networks:
+      - jenkins-network
+
+volumes:
+  jenkins_data:
+    driver: local
+
+networks:
+  jenkins-network:
+    driver: bridge

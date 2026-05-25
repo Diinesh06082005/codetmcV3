@@ -1,0 +1,83 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # Job 1: Install dependencies and build/verify code compilation
+  build-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Lint and Audit Dependencies
+        run: |
+          npm audit --audit-level=high || true
+
+      - name: Build Frontend (Vite)
+        run: npm run build
+
+      # Add test commands below once test suites are configured
+      # - name: Run Backend Tests
+      #   run: npm run test -w server
+      # - name: Run Frontend Tests
+      #   run: npm run test -w client
+
+  # Job 2: Build Docker images and push them to Docker Hub (runs on push to main/master only)
+  docker-publish:
+    needs: build-and-verify
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Server Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./server/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/codetmc-server:latest
+            ${{ secrets.DOCKER_USERNAME }}/codetmc-server:${{ github.sha }}
+
+      - name: Build and Push Client Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./client/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=${{ secrets.PRODUCTION_API_URL }}
+            VITE_SOCKET_URL=${{ secrets.PRODUCTION_SOCKET_URL }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/codetmc-client:latest
+            ${{ secrets.DOCKER_USERNAME }}/codetmc-client:${{ github.sha }}
