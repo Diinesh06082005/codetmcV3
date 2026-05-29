@@ -37,6 +37,29 @@ const roomSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    history: {
+      type: [
+        {
+          code: {
+            type: String,
+            required: true,
+          },
+          language: {
+            type: String,
+            required: true,
+          },
+          savedBy: {
+            type: String,
+            required: true,
+          },
+          timestamp: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

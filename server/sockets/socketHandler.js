@@ -250,6 +250,7 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
         language,
         activeUsers: getActiveUsers(roomId),
         isTeamLeader: room.createdBy.toString() === socket.user.id,
+        history: room.history || [],
       });
     } catch (error) {
       console.error("join-room error:", error.message);
@@ -304,6 +305,57 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
     scheduleRoomSave(roomId, code);
     callback({ success: true });
   });
+
+  socket.on("save-history", async (payload = {}, callback = () => {}) => {
+    const state = getSocketRoomState(socket.id);
+    const roomId = sanitizeRoomId(payload.roomId || state?.roomId);
+    const code = sanitizeCode(payload.code);
+    const language = sanitizeLanguage(payload.language || state?.language) || "javascript";
+
+    if (!roomId || typeof code !== "string") {
+      callback({ success: false, message: "Invalid payload." });
+      return;
+    }
+
+    try {
+      const room = await Room.findOne({ roomId });
+      if (!room) {
+        callback({ success: false, message: "Room not found." });
+        return;
+      }
+
+      const newEntry = {
+        code,
+        language,
+        savedBy: socket.user.username,
+        timestamp: new Date()
+      };
+
+      await Room.updateOne(
+        { roomId },
+        {
+          $push: {
+            history: {
+              $each: [newEntry],
+              $slice: -30
+            }
+          }
+        }
+      );
+
+      const updatedRoom = await Room.findOne({ roomId });
+      
+      io.to(roomId).emit("history-updated", {
+        history: updatedRoom.history || []
+      });
+
+      callback({ success: true, message: "History saved successfully." });
+    } catch (err) {
+      console.error("Save history error:", err.message);
+      callback({ success: false, message: "Failed to save history." });
+    }
+  });
+
 
   socket.on("chat-message", (payload = {}, callback = () => {}) => {
     if (!withinSocketRateLimit(socket, maxEvents)) {

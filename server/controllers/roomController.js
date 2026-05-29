@@ -97,6 +97,22 @@ export const createRoom = asyncHandler(async (req, res) => {
   });
 });
 
+export const getRecentRooms = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const recentRooms = await Room.find({
+    $or: [{ createdBy: userId }, { users: userId }],
+  })
+    .sort({ updatedAt: -1 })
+    .limit(10)
+    .populate(roomPopulation)
+    .lean();
+
+  return res.json({
+    success: true,
+    rooms: recentRooms.map(serializeRoom),
+  });
+});
+
 export const getRoom = asyncHandler(async (req, res) => {
   const roomId = validateRoomId(req.params.roomId);
   const room = await Room.findOne({ roomId }).populate(roomPopulation);
@@ -138,3 +154,4 @@ export const joinRoom = asyncHandler(async (req, res) => {
     room: serializeRoom(room),
   });
 });
+

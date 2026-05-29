@@ -11,6 +11,8 @@ import { adminRouter } from "./routes/adminRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { roomRouter } from "./routes/roomRoutes.js";
 import { compileRouter } from "./routes/compileRoutes.js";
+import { teamRouter } from "./routes/teamRoutes.js";
+
 import {
   authorizeSocketConnection,
   registerSocketHandlers,
@@ -58,7 +60,9 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/compile", compileRouter);
+app.use("/api/teams", teamRouter);
 app.use("/api/admin", adminRouter);
+
 
 
 app.use(notFound);
