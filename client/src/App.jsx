@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import FullPageLoader from "./components/FullPageLoader.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ErrorBoundary from "./components/common/ErrorBoundary.jsx";
+import BroadcastSideBox from "./components/BroadcastSideBox.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { getDefaultAuthenticatedRoute } from "./utils/auth.js";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
@@ -37,18 +39,22 @@ function IndexRedirect() {
 }
 
 function App() {
+  const { isAuthenticated } = useAuth();
+
   return (
-    <>
+    <ErrorBoundary>
       <Toaster
         position="top-right"
         toastOptions={{
-          duration: 2600,
+          duration: 2800,
           style: {
-            background: "rgba(9, 17, 27, 0.92)",
+            background: "rgba(13, 17, 26, 0.95)",
             color: "#f8fafc",
-            border: "1px solid rgba(148, 163, 184, 0.18)",
-            boxShadow: "0 18px 44px rgba(0, 0, 0, 0.4)",
-            backdropFilter: "blur(16px)",
+            border: "1px solid rgba(139, 92, 246, 0.25)",
+            boxShadow: "0 20px 48px rgba(0, 0, 0, 0.6)",
+            backdropFilter: "blur(20px)",
+            borderRadius: "16px",
+            fontSize: "13px",
           },
         }}
       />
@@ -75,13 +81,16 @@ function App() {
           <Route path="/dashboard" element={<Home />} />
           <Route path="/room/:roomId" element={<Room />} />
         </Route>
+
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+
+      {isAuthenticated && <BroadcastSideBox />}
+    </ErrorBoundary>
   );
 }
 

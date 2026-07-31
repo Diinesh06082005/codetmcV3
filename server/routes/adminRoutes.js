@@ -7,6 +7,7 @@ import {
   upgradeUserRole,
   getAdminAnalytics,
   getAdminSessions,
+  getAdminRooms,
   terminateRoom,
   getUpgradeRequests,
   resolveUpgradeRequest,
@@ -24,6 +25,7 @@ adminRouter.put("/users/:id/upgrade", upgradeUserRole);
 adminRouter.get("/stats", getAdminStats);
 adminRouter.get("/analytics", getAdminAnalytics);
 adminRouter.get("/sessions", getAdminSessions);
+adminRouter.get("/rooms", getAdminRooms);
 adminRouter.delete("/rooms/:roomId", terminateRoom);
 adminRouter.get("/upgrades", getUpgradeRequests);
 adminRouter.put("/upgrades/:id", resolveUpgradeRequest);

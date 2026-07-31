@@ -42,6 +42,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   return res.status(201).json({
     success: true,
     message: "Account created successfully.",
+    token,
     user: serializeUser(user),
   });
 });
@@ -76,6 +77,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   return res.json({
     success: true,
     message: "Login successful.",
+    token,
     user: serializeUser(user),
   });
 });

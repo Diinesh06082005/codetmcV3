@@ -1,5 +1,7 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { AnimatedGradient } from "./ui/animated-gradient.jsx";
 
 function AuthShell({
   eyebrow,
@@ -11,74 +13,58 @@ function AuthShell({
   footerHref,
   children,
 }) {
-  const accentLabel = accent || "Secure Realtime Collaboration";
-
   return (
-    <div className="app-shell px-4 py-6 md:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl gap-8 lg:grid-cols-[1.08fr_0.92fr]">
-        <motion.section
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          className="glass-card-strong relative overflow-hidden p-8 md:p-10"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-apple-blue/5 to-transparent pointer-events-none" />
-          <div className="relative z-10 flex h-full flex-col justify-between gap-10">
-            <div>
-              <p className="panel-title">CodeTMC</p>
-              <h1 className="mt-4 max-w-xl text-4xl font-semibold leading-tight text-white md:text-5xl tracking-tight">
-                Build, review, and ship together in a protected live code room.
-              </h1>
-              <p className="mt-6 max-w-2xl text-base leading-7 text-apple-textMuted">
-                JWT-secured sessions, authenticated sockets, live editor sync, and a
-                clean collaboration workspace tuned for pair programming and fast
-                team reviews.
-              </p>
-            </div>
+    <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-8 overflow-hidden font-display selection:bg-pink-500/30">
+      {/* Whole-page WebGL Animated Gradient Background for Auth Pages */}
+      <AnimatedGradient
+        config={{ preset: "Aurora" }}
+        className="absolute inset-0 z-0"
+      />
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { label: "Protected Rooms", value: "JWT + guarded sockets" },
-                { label: "Team Awareness", value: "Presence, chat, typing" },
-                { label: "Modern Workspace", value: "Glass UI + Monaco flow" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-[20px] border border-white/5 bg-white/5 px-5 py-5"
-                >
-                  <p className="text-xs uppercase tracking-[0.28em] text-apple-textMuted">
-                    {item.label}
-                  </p>
-                  <p className="mt-3 text-lg font-medium text-white">{item.value}</p>
-                </div>
-              ))}
-            </div>
+      {/* Subtle overlay vignette for text legibility */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 pointer-events-none" />
+
+      {/* Centered Single Auth Card */}
+      <motion.section
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="relative z-20 w-full max-w-md rounded-3xl border border-white/20 bg-slate-900/40 p-8 md:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.25)] backdrop-blur-3xl overflow-hidden"
+      >
+        {/* Top subtle gradient accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500" />
+
+        <div className="w-full">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-pink-500/10 text-pink-300 border border-pink-500/30">
+            <span className="h-2 w-2 rounded-full bg-pink-400 animate-pulse" />
+            {accent || "Encrypted JWT Session"}
+          </span>
+
+          <p className="text-xs uppercase font-extrabold tracking-widest text-slate-400 mt-5">
+            {eyebrow || "AUTHENTICATION CENTER"}
+          </p>
+          <h2 className="mt-1.5 text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-2.5 text-xs leading-relaxed text-slate-300">{description}</p>
+          )}
+
+          {/* Form Content */}
+          <div className="mt-6">{children}</div>
+
+          {/* Footer Navigation Link */}
+          <div className="mt-6 pt-5 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+            <span>{footerText}</span>
+            <Link
+              className="font-bold text-pink-400 hover:text-pink-300 transition underline underline-offset-4"
+              to={footerHref}
+            >
+              {footerLabel}
+            </Link>
           </div>
-        </motion.section>
-
-        <motion.section
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.1 }}
-          className="glass-card flex items-center justify-center p-6 md:p-8"
-        >
-          <div className="w-full max-w-md">
-            <span className="status-pill bg-apple-blue/10 text-apple-blue">{accentLabel}</span>
-            <p className="panel-title mt-6">{eyebrow}</p>
-            <h2 className="mt-3 text-3xl font-semibold text-white tracking-tight">{title}</h2>
-            <p className="mt-4 text-sm leading-6 text-apple-textMuted">{description}</p>
-
-            <div className="mt-8">{children}</div>
-
-            <p className="mt-8 text-sm text-apple-textMuted">
-              {footerText}{" "}
-              <Link className="text-apple-blue transition duration-300 hover:text-apple-blueHover" to={footerHref}>
-                {footerLabel}
-              </Link>
-            </p>
-          </div>
-        </motion.section>
-      </div>
+        </div>
+      </motion.section>
     </div>
   );
 }

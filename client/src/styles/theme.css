@@ -1,17 +1,74 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
-:root {
+/* ================= DF1: Dynamic Glass Motion (DEFAULT) ================= */
+:root,
+[data-theme="df1"] {
   color-scheme: dark;
-  --page-bg: #000000;
-  --page-bg-soft: #1c1c1e;
-  --page-grid: rgba(255, 255, 255, 0.04);
-  --apple-blue: #0A84FF;
-  --apple-blue-glow: rgba(10, 132, 255, 0.15);
+  --bg-page-image: url("/images/backgrounds/4921254.jpg");
+  --bg-page-color: #07080c;
+  --glass-card-strong-bg: rgba(255, 255, 255, 0.05);
+  --glass-card-strong-border: rgba(255, 255, 255, 0.14);
+  --glass-card-strong-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  --glass-card-strong-blur: blur(36px);
+
+  --glass-card-bg: rgba(255, 255, 255, 0.04);
+  --glass-card-border: rgba(255, 255, 255, 0.12);
+  --glass-card-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  --glass-card-blur: blur(28px);
+
+  --glass-panel-bg: rgba(0, 0, 0, 0.25);
+  --glass-panel-border: rgba(255, 255, 255, 0.1);
+
+  --sidebar-bg: rgba(14, 17, 26, 0.45);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+
+  --header-bg: rgba(14, 17, 26, 0.45);
+  --header-border: rgba(255, 255, 255, 0.12);
+
+  --accent-blue: #22d3ee;
+  --accent-blue-hover: #06b6d4;
 }
 
+/* ================= DF2: Static Glass Wallpaper ================= */
+[data-theme="df2"] {
+  color-scheme: dark;
+  --bg-page-image: url("/images/backgrounds/4921254.jpg");
+  --bg-page-color: #07080c;
+  --glass-card-strong-bg: rgba(255, 255, 255, 0.05);
+  --glass-card-strong-border: rgba(255, 255, 255, 0.14);
+  --glass-card-strong-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  --glass-card-strong-blur: blur(36px);
+
+  --glass-card-bg: rgba(255, 255, 255, 0.04);
+  --glass-card-border: rgba(255, 255, 255, 0.12);
+  --glass-card-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  --glass-card-blur: blur(28px);
+
+  --glass-panel-bg: rgba(0, 0, 0, 0.25);
+  --glass-panel-border: rgba(255, 255, 255, 0.1);
+
+  --sidebar-bg: rgba(14, 17, 26, 0.45);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+
+  --header-bg: rgba(14, 17, 26, 0.45);
+  --header-border: rgba(255, 255, 255, 0.12);
+
+  --accent-blue: #bef264;
+  --accent-blue-hover: #a3e635;
+}
+
+/* Page Background Rendering with Vivid Ambient Orb Glows */
 body {
-  background-color: var(--page-bg);
-  background-image: radial-gradient(circle at 50% -20%, var(--apple-blue-glow), transparent 60%);
+  background-color: #07080c;
+  background-image: 
+    radial-gradient(circle at 18% 22%, rgba(190, 242, 100, 0.38) 0%, transparent 48%),
+    radial-gradient(circle at 82% 78%, rgba(244, 114, 182, 0.32) 0%, transparent 52%),
+    var(--bg-page-image);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  transition: background-image 0.3s ease, background-color 0.3s ease;
 }
 
 body::before {
@@ -20,8 +77,10 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(var(--page-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--page-grid) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 80%);
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0.85), transparent 85%);
+  z-index: 1;
 }
+

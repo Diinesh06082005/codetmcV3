@@ -11,10 +11,11 @@
 
   html {
     scroll-behavior: smooth;
+    color-scheme: dark;
   }
 
   body {
-    @apply min-h-screen font-display text-apple-text antialiased;
+    @apply min-h-screen bg-[#07090e] font-display text-apple-text antialiased selection:bg-violet-500/30 selection:text-white;
   }
 
   button,
@@ -23,51 +24,88 @@
   textarea {
     @apply outline-none;
   }
-
-  ::selection {
-    @apply bg-apple-blue/30 text-white;
-  }
 }
 
 @layer utilities {
-  .glass-card {
-    @apply rounded-[24px] border border-white/10 bg-apple-card/60 shadow-glass backdrop-blur-xl transition duration-300 hover:bg-apple-cardHover/60;
+  .glass-card-strong {
+    background-color: var(--glass-card-strong-bg) !important;
+    border: 1px solid var(--glass-card-strong-border) !important;
+    box-shadow: var(--glass-card-strong-shadow) !important;
+    backdrop-filter: var(--glass-card-strong-blur) !important;
+    -webkit-backdrop-filter: var(--glass-card-strong-blur) !important;
+    border-radius: 1.5rem;
+    transition: all 0.3s ease;
   }
 
-  .glass-card-strong {
-    @apply rounded-[32px] border border-white/[0.15] bg-apple-card/80 shadow-glass backdrop-blur-2xl;
+  .glass-card {
+    background-color: var(--glass-card-bg) !important;
+    border: 1px solid var(--glass-card-border) !important;
+    box-shadow: var(--glass-card-shadow) !important;
+    backdrop-filter: var(--glass-card-blur) !important;
+    -webkit-backdrop-filter: var(--glass-card-blur) !important;
+    border-radius: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .glass-panel {
+    background-color: var(--glass-panel-bg) !important;
+    border: 1px solid var(--glass-panel-border) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+  }
+
+  .app-sidebar {
+    background-color: var(--sidebar-bg) !important;
+    border-color: var(--sidebar-border) !important;
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .app-header {
+    background-color: var(--header-bg) !important;
+    border-color: var(--header-border) !important;
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
 
   .panel-title {
-    @apply text-xs font-medium uppercase tracking-wider text-apple-textMuted;
+    @apply text-[11px] font-bold uppercase tracking-wider text-slate-400;
   }
 
   .status-pill {
-    @apply inline-flex items-center rounded-full bg-apple-blue/10 px-3 py-1 text-xs font-medium text-apple-blue;
+    @apply inline-flex items-center rounded-full bg-white/[0.1] backdrop-blur-md px-2.5 py-0.5 text-xs font-medium text-white border border-white/20 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.25)];
   }
 
   .gradient-button {
-    @apply rounded-[16px] bg-apple-blue px-4 py-3 font-semibold text-white transition duration-300 hover:bg-apple-blueHover hover:shadow-glow active:scale-95;
+    background-color: var(--accent-blue) !important;
+    @apply rounded-xl px-4 py-2 text-sm font-medium text-white transition-all duration-150 border-none shadow-[0_4px_16px_rgba(10,132,255,0.4),inset_0_1px_0_0_rgba(255,255,255,0.4)];
+  }
+  .gradient-button:hover {
+    background-color: var(--accent-blue-hover) !important;
   }
 
   .subtle-button {
-    @apply rounded-[16px] border border-white/10 bg-white/5 px-4 py-3 font-semibold text-white transition duration-300 hover:bg-white/10 active:scale-95;
+    @apply rounded-xl border border-white/20 bg-white/[0.1] backdrop-blur-xl hover:bg-white/[0.18] active:bg-white/[0.25] px-4 py-2 text-sm font-medium text-white transition-all duration-150 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.3)];
   }
 
   .danger-button {
-    @apply rounded-[16px] bg-red-500/10 border border-red-500/20 px-4 py-3 font-semibold text-red-500 transition duration-300 hover:bg-red-500/20 active:scale-95;
+    @apply rounded-xl bg-[#FF453A]/20 border border-[#FF453A]/40 backdrop-blur-md text-[#FF453A] hover:bg-[#FF453A]/30 active:bg-[#FF453A]/40 px-4 py-2 text-sm font-medium transition-colors duration-150 shadow-[inset_0_1px_0_0_rgba(255,69,58,0.3)];
   }
 
   .input-shell {
-    @apply w-full rounded-[16px] border border-white/10 bg-apple-bg/50 px-4 py-3.5 text-sm text-apple-text transition duration-300 placeholder:text-apple-textMuted focus:border-apple-blue focus:bg-apple-card focus:shadow-[0_0_0_1px_rgba(10,132,255,1)];
+    @apply w-full rounded-xl border border-white/20 bg-black/35 backdrop-blur-xl px-3.5 py-2.5 text-sm text-white transition-all duration-150 placeholder:text-slate-400 focus:border-[#0A84FF] focus:bg-black/50 focus:outline-none focus:ring-1 focus:ring-[#0A84FF] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)];
   }
 
   .app-shell {
-    @apply relative overflow-hidden;
+    @apply relative overflow-hidden h-screen max-h-screen;
   }
 
   .skeleton-bar {
-    @apply rounded-full bg-white/10;
+    @apply rounded-xl bg-white/10;
     animation: shimmer 1.8s ease-in-out infinite;
   }
 
@@ -85,4 +123,53 @@
     background: rgba(255, 255, 255, 0.2);
     border-radius: 999px;
   }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
+  }
+}
+
+/* GSAP Social Cards 3D Fan Carousel Layout */
+.fan-layout {
+  perspective: 1200px;
+  height: 22rem;
+}
+
+@media (min-width: 640px) {
+  .fan-layout { height: 24rem; }
+}
+@media (min-width: 768px) {
+  .fan-layout { height: 26rem; }
+}
+@media (min-width: 1024px) {
+  .fan-layout { height: 28rem; }
+}
+
+.fan-card {
+  position: absolute;
+  width: 13rem;
+  height: 18rem;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  will-change: transform, opacity;
+  transform-origin: center bottom;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .fan-card { width: 14.5rem; height: 20rem; }
+}
+@media (min-width: 768px) {
+  .fan-card { width: 16rem; height: 22rem; }
+}
+@media (min-width: 1024px) {
+  .fan-card { width: 17.5rem; height: 23.5rem; }
+}
+
+.fan-card:hover {
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 35px rgba(6, 182, 212, 0.35);
 }

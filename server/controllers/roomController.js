@@ -18,14 +18,14 @@ const roomPopulation = [
 ];
 
 const serializeUser = (user) => ({
-  id: user._id.toString(),
-  username: user.username,
-  email: user.email,
-  createdAt: user.createdAt,
+  id: user?._id ? user._id.toString() : (user?.id || ""),
+  username: user?.username || "",
+  email: user?.email || "",
+  createdAt: user?.createdAt || null,
 });
 
 const serializeRoom = (room) => ({
-  id: room._id.toString(),
+  id: room?._id ? room._id.toString() : (room?.id || ""),
   roomId: room.roomId,
   code: typeof room.code === "string" ? room.code : defaultStarterCode,
   createdAt: room.createdAt,
@@ -65,20 +65,31 @@ export const createRoom = asyncHandler(async (req, res) => {
 
   const user = await User.findById(req.user._id);
 
+  if (!user) {
+    throw new ApiError(404, "User profile not found.");
+  }
+
   if (user.role !== "admin") {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (!user.roomsCreatedToday.date || user.roomsCreatedToday.date.getTime() !== today.getTime()) {
-      user.roomsCreatedToday.date = today;
-      user.roomsCreatedToday.count = 0;
+    const currentDate = user.roomsCreatedToday?.date
+      ? new Date(user.roomsCreatedToday.date)
+      : null;
+
+    if (!currentDate || currentDate.getTime() !== today.getTime()) {
+      user.roomsCreatedToday = {
+        date: today,
+        count: 0,
+      };
     }
 
-    if (user.roomsCreatedToday.count >= user.roomLimit) {
-      throw new ApiError(403, `Daily room creation limit (${user.roomLimit}) reached. Please request an upgrade.`);
+    const roomLimit = user.roomLimit ?? 4;
+    if ((user.roomsCreatedToday?.count ?? 0) >= roomLimit) {
+      throw new ApiError(403, `Daily room creation limit (${roomLimit}) reached. Please request an upgrade.`);
     }
 
-    user.roomsCreatedToday.count += 1;
+    user.roomsCreatedToday.count = (user.roomsCreatedToday?.count ?? 0) + 1;
     await user.save();
   }
 

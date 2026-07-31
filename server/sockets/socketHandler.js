@@ -194,7 +194,7 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
       }
 
       const isExistingMember = room.users.some(
-        (user) => user._id.toString() === socket.user.id
+        (user) => (user?._id?.toString() || user?.toString()) === socket.user.id
       );
       const isAdmin = socket.user.role === "admin";
 
@@ -229,7 +229,8 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
         console.error("Session creation error:", err.message);
       }
 
-      setSocketRoomState(socket.id, { roomId, language, sessionId, joinTime, isSpectator, isTeamLeader: room.createdBy.toString() === socket.user.id });
+      const roomCreatorId = room.createdBy?._id?.toString() || room.createdBy?.toString() || "";
+      setSocketRoomState(socket.id, { roomId, language, sessionId, joinTime, isSpectator, isTeamLeader: roomCreatorId === socket.user.id });
 
       // Emit room users only to normal members, or to the spectator joining directly
       emitRoomUsers(io, roomId);
@@ -346,6 +347,7 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
       const updatedRoom = await Room.findOne({ roomId });
       
       io.to(roomId).emit("history-updated", {
+        roomId,
         history: updatedRoom.history || []
       });
 
@@ -377,6 +379,9 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
       user: socket.user,
       username: socket.user.username,
       message,
+      isVoiceNote: Boolean(payload.isVoiceNote),
+      audioUrl: payload.audioUrl || null,
+      duration: payload.duration || 0,
       sentAt: new Date().toISOString(),
     });
 
@@ -492,5 +497,130 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
         mediaState: currentUser.mediaState
       });
     }
+  });
+
+  socket.on("ping-user", (payload = {}, callback = () => {}) => {
+    const state = getSocketRoomState(socket.id);
+    const roomId = sanitizeRoomId(payload.roomId || state?.roomId);
+    const targetUserId = payload.targetUserId;
+    const targetUsername = payload.targetUsername;
+
+    if (!roomId) {
+      callback({ success: false, message: "Room required." });
+      return;
+    }
+
+    io.to(roomId).emit("user-pinged", {
+      fromUser: socket.user,
+      targetUserId,
+      targetUsername,
+      roomId,
+      message: `🚨 Alert from @${socket.user.username}: You are requested in room #${roomId}!`,
+    });
+
+    callback({ success: true });
+  });
+
+  socket.on("system-broadcast", (payload = {}, callback = () => {}) => {
+    if (socket.user?.role !== "admin") {
+      callback({ success: false, message: "Admin privileges required." });
+      return;
+    }
+
+    const message = sanitizeChatMessage(payload.message);
+    if (!message) {
+      callback({ success: false, message: "Broadcast message is required." });
+      return;
+    }
+
+    const broadcastData = {
+      _id: `broadcast-${Date.now()}`,
+      title: payload.title || "Admin Alert",
+      message,
+      senderName: socket.user.username,
+      role: "admin",
+      targetType: "global",
+      priority: payload.priority || "urgent",
+      createdAt: new Date().toISOString(),
+    };
+
+    io.emit("broadcast-received", broadcastData);
+    io.emit("system-broadcast", {
+      id: broadcastData._id,
+      message,
+      sender: socket.user.username,
+      sentAt: broadcastData.createdAt,
+    });
+
+    callback({ success: true });
+  });
+
+  socket.on("send-broadcast", async (payload = {}, callback = () => {}) => {
+    const { title, message, priority = "info", targetType = "global", roomId } = payload;
+    const cleanMsg = sanitizeChatMessage(message);
+
+    if (!cleanMsg) {
+      callback({ success: false, message: "Broadcast text is required." });
+      return;
+    }
+
+    const isAdmin = socket.user?.role === "admin";
+    const state = getSocketRoomState(socket.id);
+    const isTeamLead = state?.isTeamLeader;
+
+    if (!isAdmin && targetType === "global") {
+      callback({ success: false, message: "Only Admins can send global broadcasts." });
+      return;
+    }
+
+    if (!isAdmin && !isTeamLead) {
+      callback({ success: false, message: "Only Team Leads or Admins can send broadcasts." });
+      return;
+    }
+
+    const broadcastPayload = {
+      _id: `b-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      title: title || (isAdmin ? "Admin Alert" : "Team Lead Announcement"),
+      message: cleanMsg,
+      senderName: socket.user.username,
+      role: isAdmin ? "admin" : "team_lead",
+      targetType: targetType === "global" ? "global" : "room",
+      roomId: targetType === "room" ? roomId : null,
+      priority,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (broadcastPayload.targetType === "global") {
+      io.emit("broadcast-received", broadcastPayload);
+    } else if (broadcastPayload.roomId) {
+      io.to(broadcastPayload.roomId).emit("broadcast-received", broadcastPayload);
+    }
+
+    callback({ success: true, broadcast: broadcastPayload });
+  });
+
+  socket.on("admin-code-overwrite", async (payload = {}, callback = () => {}) => {
+    if (socket.user?.role !== "admin") {
+      callback({ success: false, message: "Admin authorization required." });
+      return;
+    }
+
+    const roomId = sanitizeRoomId(payload.roomId);
+    const code = sanitizeCode(payload.code);
+    const language = sanitizeLanguage(payload.language) || "javascript";
+
+    if (!roomId || typeof code !== "string") {
+      callback({ success: false, message: "Invalid payload." });
+      return;
+    }
+
+    io.to(roomId).emit("code-change", {
+      code,
+      language,
+      updatedBy: `[ADMIN] @${socket.user.username}`,
+    });
+
+    scheduleRoomSave(roomId, code);
+    callback({ success: true, message: `Live overwrite applied to room ${roomId}.` });
   });
 };

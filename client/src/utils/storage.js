@@ -12,23 +12,24 @@ export const getStoredAuth = () => {
   const storage = getSafeStorage();
 
   if (!storage) {
-    return { user: null };
+    return { user: null, token: null };
   }
 
   try {
     const rawValue = storage.getItem(AUTH_STORAGE_KEY);
 
     if (!rawValue) {
-      return { user: null };
+      return { user: null, token: null };
     }
 
     const parsedValue = JSON.parse(rawValue);
 
     return {
       user: parsedValue?.user || null,
+      token: parsedValue?.token || null,
     };
   } catch (error) {
-    return { user: null };
+    return { user: null, token: null };
   }
 };
 

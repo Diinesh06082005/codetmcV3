@@ -13,9 +13,10 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(initialSession.user || emptySession.user);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
-  const applySession = (nextUser) => {
+  const applySession = (nextUser, nextToken) => {
     if (nextUser) {
-      setStoredAuth({ user: nextUser });
+      const existing = getStoredAuth();
+      setStoredAuth({ user: nextUser, token: nextToken || existing.token || null });
     } else {
       clearStoredAuth();
     }
@@ -57,13 +58,13 @@ export function AuthProvider({ children }) {
 
   const login = async (credentials) => {
     const response = await api.login(credentials);
-    applySession(response.user);
+    applySession(response.user, response.token);
     return response;
   };
 
   const register = async (payload) => {
     const response = await api.register(payload);
-    applySession(response.user);
+    applySession(response.user, response.token);
     return response;
   };
 

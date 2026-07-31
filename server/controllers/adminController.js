@@ -44,7 +44,7 @@ export const getAllUsers = asyncHandler(async (req, res) => {
   const [users, sessionCountMap] = await Promise.all([
     User.find()
       .sort({ createdAt: -1 })
-      .select("_id username email role createdAt lastLoginAt lastSeenAt lastSessionDurationMs totalSessions totalTimeSpent")
+      .select("_id username email role createdAt lastLoginAt lastSeenAt lastSessionDurationMs totalSessions totalTimeSpent roomLimit roomsCreatedToday upgradeStatus")
       .lean(),
     buildSessionCountMap(),
   ]);
@@ -60,7 +60,7 @@ export const getUserDetails = asyncHandler(async (req, res) => {
 
   const [user, sessionCountMap, recentRooms, activeRoomMemberships] = await Promise.all([
     User.findById(userId)
-      .select("_id username email role createdAt lastLoginAt lastSeenAt lastSessionDurationMs totalSessions totalTimeSpent")
+      .select("_id username email role createdAt lastLoginAt lastSeenAt lastSessionDurationMs totalSessions totalTimeSpent roomLimit roomsCreatedToday upgradeStatus")
       .lean(),
     buildSessionCountMap(),
     Room.find({
@@ -68,7 +68,7 @@ export const getUserDetails = asyncHandler(async (req, res) => {
     })
       .sort({ updatedAt: -1 })
       .limit(6)
-      .select("_id roomId createdAt updatedAt createdBy users")
+      .select("_id roomId code createdAt updatedAt createdBy users")
       .lean(),
     Room.countDocuments({ users: userId }),
   ]);
@@ -85,12 +85,35 @@ export const getUserDetails = asyncHandler(async (req, res) => {
       recentRooms: recentRooms.map((room) => ({
         id: room._id.toString(),
         roomId: room.roomId,
+        code: room.code || "",
         createdAt: room.createdAt,
         updatedAt: room.updatedAt,
         collaboratorCount: Array.isArray(room.users) ? room.users.length : 0,
         createdByUserId: room.createdBy?.toString?.() || "",
       })),
     },
+  });
+});
+
+export const getAdminRooms = asyncHandler(async (req, res) => {
+  const rooms = await Room.find()
+    .sort({ updatedAt: -1 })
+    .populate("users", "_id username email")
+    .populate("createdBy", "_id username email")
+    .lean();
+
+  return res.json({
+    success: true,
+    rooms: rooms.map((r) => ({
+      id: r._id.toString(),
+      roomId: r.roomId,
+      code: r.code || "",
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      collaboratorCount: Array.isArray(r.users) ? r.users.length : 0,
+      createdBy: r.createdBy,
+      users: r.users,
+    })),
   });
 });
 
@@ -142,7 +165,7 @@ export const getAdminStats = asyncHandler(async (req, res) => {
     success: true,
     stats: {
       totalUsers,
-      activeRooms: getActiveRoomsCount(),
+      activeRooms: getActiveRoomsCount() || totalSessionsCreated,
       totalSessionsCreated,
       activeUsers: getActiveUserCount(),
       serverStartedAt: req.app.locals.serverStartedAt,

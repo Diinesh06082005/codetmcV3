@@ -18,9 +18,7 @@ export const requireAuth = asyncHandler(async (req, res, next) => {
   }
 
   const decoded = verifyToken(token);
-  const user = await User.findById(decoded.userId).select(
-    "_id username email role createdAt lastLoginAt lastSeenAt lastSessionDurationMs"
-  );
+  const user = await User.findById(decoded.userId);
 
   if (!user) {
     throw new ApiError(401, "Not authorized. User no longer exists.");

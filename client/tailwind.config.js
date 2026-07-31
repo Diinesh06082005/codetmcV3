@@ -5,42 +5,44 @@ export default {
     extend: {
       colors: {
         apple: {
-          bg: "#000000",
-          card: "#1c1c1e",
-          cardHover: "#2c2c2e",
-          blue: "#0A84FF",
-          blueHover: "#007AFF",
-          text: "#F5F5F7",
+          bg: "#0b0c10",
+          card: "rgba(28, 28, 30, 0.6)",
+          cardHover: "rgba(44, 44, 46, 0.8)",
+          blue: "#007AFF",
+          blueHover: "#0062CC",
+          red: "#FF453A",
+          green: "#30D158",
+          text: "#F2F2F7",
           textMuted: "#8E8E93",
-          border: "rgba(255, 255, 255, 0.1)",
-          glass: "rgba(28, 28, 30, 0.65)",
+          border: "rgba(255, 255, 255, 0.12)",
+          glass: "rgba(30, 30, 32, 0.75)",
         },
       },
       fontFamily: {
         display: [
-          "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
           "SF Pro Display",
+          "Inter",
           "Segoe UI",
           "Roboto",
-          "sans-serif"
+          "sans-serif",
         ],
         mono: [
           "SF Mono",
           "JetBrains Mono",
           "ui-monospace",
-          "monospace"
+          "monospace",
         ],
       },
       boxShadow: {
-        glass: "0 8px 32px rgba(0, 0, 0, 0.3)",
-        glow: "0 0 20px rgba(10, 132, 255, 0.4)",
+        glass: "0 4px 24px rgba(0, 0, 0, 0.4)",
+        glow: "none",
+        apple: "0 2px 8px rgba(0, 0, 0, 0.25)",
       },
       animation: {
-        "pulse-soft": "pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         shimmer: "shimmer 2s infinite linear",
-        "fade-in": "fadeIn 0.5s ease-out forwards",
+        "fade-in": "fadeIn 0.3s ease-out forwards",
       },
       keyframes: {
         "pulse-soft": {

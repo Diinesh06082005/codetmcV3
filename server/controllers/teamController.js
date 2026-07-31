@@ -62,11 +62,13 @@ export const getTeamDetails = asyncHandler(async (req, res) => {
   }
 
   // Check if current user is owner or member
+  const currentUserId = req.user._id.toString();
+  const ownerId = team.owner?._id?.toString() || team.owner?.toString() || "";
   const isMember = team.members.some(
-    (member) => member._id.toString() === req.user._id.toString()
+    (member) => (member?._id?.toString() || member?.toString()) === currentUserId
   );
 
-  if (!isMember && team.owner._id.toString() !== req.user._id.toString()) {
+  if (!isMember && ownerId !== currentUserId) {
     throw new ApiError(403, "You are not authorized to view this team.");
   }
 
@@ -98,11 +100,13 @@ export const inviteToTeam = asyncHandler(async (req, res) => {
   }
 
   // Ensure current user is the owner or a member
+  const currentUserId = req.user._id.toString();
+  const ownerId = team.owner?._id?.toString() || team.owner?.toString() || "";
   const isMember = team.members.some(
-    (member) => member.toString() === req.user._id.toString()
+    (member) => (member?._id?.toString() || member?.toString()) === currentUserId
   );
 
-  if (!isMember && team.owner.toString() !== req.user._id.toString()) {
+  if (!isMember && ownerId !== currentUserId) {
     throw new ApiError(403, "Only team members can invite others.");
   }
 
@@ -124,13 +128,13 @@ export const inviteToTeam = asyncHandler(async (req, res) => {
   }
 
   // Cannot invite oneself
-  if (receiver._id.toString() === req.user._id.toString()) {
+  if (receiver._id.toString() === currentUserId) {
     throw new ApiError(400, "You cannot invite yourself.");
   }
 
   // Check if receiver is already a member
   const alreadyMember = team.members.some(
-    (member) => member.toString() === receiver._id.toString()
+    (member) => (member?._id?.toString() || member?.toString()) === receiver._id.toString()
   );
 
   if (alreadyMember) {
