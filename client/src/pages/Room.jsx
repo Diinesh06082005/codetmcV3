@@ -351,11 +351,12 @@ console.log("Server initialized.");`,
   }, [socket, user?.id, user?.username, isOfflineMode, activeFileId, navigate]);
 
   useEffect(() => {
-    if (!socket || !isConnected || !roomId) {
+    if (!roomId) {
       return undefined;
     }
 
     let isMounted = true;
+    let fallbackTimeout = null;
 
     const joinActiveRoom = async () => {
       try {
@@ -365,6 +366,13 @@ console.log("Server initialized.");`,
         setUsers([]);
         setHistory([]);
 
+        // Safety fallback timer to ensure loading screen never hangs
+        fallbackTimeout = setTimeout(() => {
+          if (isMounted) {
+            setIsLoading(false);
+          }
+        }, 3000);
+
         const roomResponse = await api.getRoom({ roomId });
 
         if (!isMounted) {
@@ -373,42 +381,44 @@ console.log("Server initialized.");`,
 
         setRoomMeta(roomResponse.room);
 
-        await api.joinRoom({ roomId });
+        await api.joinRoom({ roomId }).catch(() => {});
 
         if (!isMounted) {
           return;
         }
 
-        const spectatorStatus = user?.role === "admin" && roomResponse.room.createdBy !== user?.id;
+        const spectatorStatus = user?.role === "admin" && roomResponse.room?.createdBy?.id !== user?.id && roomResponse.room?.createdBy !== user?.id;
         setIsSpectator(spectatorStatus);
+        setIsLoading(false);
 
-        socket.emit(
-          "join-room",
-          {
-            roomId,
-            language: getLanguageFromFilename(activeFile.name),
-            isSpectator: spectatorStatus,
-          },
-          (response) => {
-            if (!isMounted) {
-              return;
+        if (socket && isConnected) {
+          socket.emit(
+            "join-room",
+            {
+              roomId,
+              language: getLanguageFromFilename(activeFile.name),
+              isSpectator: spectatorStatus,
+            },
+            (response) => {
+              if (!isMounted) {
+                return;
+              }
+
+              if (!response?.success) {
+                toast.error(response?.message || "Unable to sync with active room.");
+                return;
+              }
+
+              setUsers(response.activeUsers || []);
+              setIsTeamLeader(response.isTeamLeader);
+              setHistory(response.history || []);
             }
-
-            if (!response?.success) {
-              toast.error(response?.message || "Unable to join the room.");
-              navigate("/dashboard");
-              return;
-            }
-
-            setUsers(response.activeUsers || []);
-            setIsTeamLeader(response.isTeamLeader);
-            setHistory(response.history || []);
-            setIsLoading(false);
-          }
-        );
+          );
+        }
       } catch (error) {
         if (isMounted) {
           toast.error(error.message || "Unable to load the room.");
+          setIsLoading(false);
           navigate("/dashboard");
         }
       }
@@ -419,6 +429,10 @@ console.log("Server initialized.");`,
     return () => {
       isMounted = false;
 
+      if (fallbackTimeout) {
+        clearTimeout(fallbackTimeout);
+      }
+
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
@@ -427,9 +441,11 @@ console.log("Server initialized.");`,
         clearTimeout(typingIndicatorTimerRef.current);
       }
 
-      socket.emit("leave-room", { roomId });
+      if (socket && isConnected) {
+        socket.emit("leave-room", { roomId });
+      }
     };
-  }, [socket, isConnected, roomId, navigate]);
+  }, [socket, isConnected, roomId, user, navigate]);
 
   // File Tree Switcher Handler
   const handleSelectFile = (fileId) => {
