@@ -957,41 +957,43 @@ console.log("Server initialized.");`,
             </div>
 
             {/* Left Panel Active Tab Content */}
-            {leftTab === "explorer" ? (
-              <div className="flex-1">
-                <FileExplorer
-                  files={projectFiles}
-                  activeFileId={activeFileId}
-                  isTeamLeader={isTeamLeader}
-                  onSelectFile={handleSelectFile}
-                  onCreateFile={handleCreateFile}
-                  onCreateFolder={handleCreateFolder}
-                  onDeleteFile={handleDeleteFile}
-                />
-              </div>
-            ) : leftTab === "collaborators" ? (
-              <div className="flex flex-col gap-4 flex-1">
-                <UserList
-                  users={users}
-                  roomMeta={roomMeta}
-                  history={history}
-                  currentUserId={user?.id}
-                  onPingUser={handlePingUser}
-                />
-                <VideoChat
-                  socket={socket}
-                  roomId={roomId}
-                  user={user}
-                  isTeamLeader={isTeamLeader}
-                  activeUsers={users}
-                  isSpectator={isSpectator}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <HistoryLog history={history} onRollback={handleRollback} />
-              </div>
-            )}
+            <div className={leftTab === "explorer" ? "flex-1 block" : "hidden"}>
+              <FileExplorer
+                files={projectFiles}
+                activeFileId={activeFileId}
+                isTeamLeader={isTeamLeader}
+                onSelectFile={handleSelectFile}
+                onCreateFile={handleCreateFile}
+                onCreateFolder={handleCreateFolder}
+                onDeleteFile={handleDeleteFile}
+              />
+            </div>
+
+            <div className={leftTab === "collaborators" ? "flex flex-col gap-4 flex-1 block" : "hidden"}>
+              <UserList
+                users={users}
+                roomMeta={roomMeta}
+                history={history}
+                currentUserId={user?.id}
+                onPingUser={handlePingUser}
+              />
+            </div>
+
+            <div className={leftTab === "history" ? "flex-1 block" : "hidden"}>
+              <HistoryLog history={history} onRollback={handleRollback} />
+            </div>
+
+            {/* Persistent VideoChat component: stays connected in background */}
+            <div className={leftTab === "collaborators" ? "block mt-4" : "hidden"}>
+              <VideoChat
+                socket={socket}
+                roomId={roomId}
+                user={user}
+                isTeamLeader={isTeamLeader}
+                activeUsers={users}
+                isSpectator={isSpectator}
+              />
+            </div>
           </motion.div>
         ) : (
           <button

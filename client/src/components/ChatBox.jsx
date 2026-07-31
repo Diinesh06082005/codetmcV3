@@ -147,8 +147,9 @@ function ChatBox({ messages, onSendMessage, onTypingChange, typingUsers, current
       <div className="scrollbar-thin flex-1 space-y-3 overflow-y-auto pr-1">
         {messages.length ? (
           messages.map((message) => {
-            const isCurrentUser = message.user?.id === currentUserId;
-            const isVoice = message.isVoiceNote || message.audioUrl;
+            const senderId = message.user?.id || message.user?._id || message.user || message.userId;
+            const isCurrentUser = Boolean(senderId && String(senderId) === String(currentUserId));
+            const isVoice = Boolean(message.isVoiceNote || message.audioUrl);
 
             return (
               <div

@@ -193,14 +193,15 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
         return;
       }
 
-      const isExistingMember = room.users.some(
-        (user) => (user?._id?.toString() || user?.toString()) === socket.user.id
+      let isExistingMember = room.users.some(
+        (u) => (u?._id?.toString() || u?.id?.toString() || u?.toString()) === socket.user.id
       );
       const isAdmin = socket.user.role === "admin";
 
-      if (!isExistingMember && !isAdmin) {
-        callback({ success: false, message: "You are not authorized to join this room." });
-        return;
+      if (!isExistingMember) {
+        room.users.push(socket.user.id);
+        await room.save().catch(() => {});
+        isExistingMember = true;
       }
 
       const isSpectator = payload.isSpectator === true && isAdmin;
