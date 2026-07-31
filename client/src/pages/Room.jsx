@@ -350,6 +350,7 @@ console.log("Server initialized.");`,
     };
   }, [socket, user?.id, user?.username, isOfflineMode, activeFileId, navigate]);
 
+  // 1. Fetch Room Data via HTTP REST endpoint upon mounting or roomId change
   useEffect(() => {
     if (!roomId) {
       return undefined;
@@ -358,7 +359,7 @@ console.log("Server initialized.");`,
     let isMounted = true;
     let fallbackTimeout = null;
 
-    const joinActiveRoom = async () => {
+    const loadRoomData = async () => {
       try {
         setIsLoading(true);
         setMessages([]);
@@ -366,55 +367,37 @@ console.log("Server initialized.");`,
         setUsers([]);
         setHistory([]);
 
-        // Safety fallback timer to ensure loading screen never hangs
+        // Fallback timer to prevent skeleton UI from hanging indefinitely
         fallbackTimeout = setTimeout(() => {
           if (isMounted) {
             setIsLoading(false);
           }
         }, 3000);
 
-        const roomResponse = await api.getRoom({ roomId });
+        // Ensure user is joined & fetch latest room details
+        const joinResponse = await api.joinRoom({ roomId });
 
         if (!isMounted) {
           return;
         }
 
-        setRoomMeta(roomResponse.room);
+        const room = joinResponse.room;
+        setRoomMeta(room);
 
-        await api.joinRoom({ roomId }).catch(() => {});
-
-        if (!isMounted) {
-          return;
-        }
-
-        const spectatorStatus = user?.role === "admin" && roomResponse.room?.createdBy?.id !== user?.id && roomResponse.room?.createdBy !== user?.id;
-        setIsSpectator(spectatorStatus);
-        setIsLoading(false);
-
-        if (socket && isConnected) {
-          socket.emit(
-            "join-room",
-            {
-              roomId,
-              language: getLanguageFromFilename(activeFile.name),
-              isSpectator: spectatorStatus,
-            },
-            (response) => {
-              if (!isMounted) {
-                return;
-              }
-
-              if (!response?.success) {
-                toast.error(response?.message || "Unable to sync with active room.");
-                return;
-              }
-
-              setUsers(response.activeUsers || []);
-              setIsTeamLeader(response.isTeamLeader);
-              setHistory(response.history || []);
-            }
+        // Populate initial room code into editor state if present
+        if (typeof room?.code === "string" && room.code.trim()) {
+          setCode(room.code);
+          setProjectFiles((prev) =>
+            prev.map((f) => (f.id === activeFileId ? { ...f, content: room.code } : f))
           );
         }
+
+        const creatorId = room?.createdBy?.id || room?.createdBy?._id || room?.createdBy;
+        const spectatorStatus =
+          user?.role === "admin" && creatorId && String(creatorId) !== String(user?.id);
+
+        setIsSpectator(Boolean(spectatorStatus));
+        setIsLoading(false);
       } catch (error) {
         if (isMounted) {
           toast.error(error.message || "Unable to load the room.");
@@ -424,7 +407,7 @@ console.log("Server initialized.");`,
       }
     };
 
-    joinActiveRoom();
+    loadRoomData();
 
     return () => {
       isMounted = false;
@@ -440,12 +423,55 @@ console.log("Server initialized.");`,
       if (typingIndicatorTimerRef.current) {
         clearTimeout(typingIndicatorTimerRef.current);
       }
+    };
+  }, [roomId, user?.id, navigate]);
 
-      if (socket && isConnected) {
+  // 2. Real-Time Socket Connection & Room Event Sync
+  useEffect(() => {
+    if (!socket || !isConnected || !roomId) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    socket.emit(
+      "join-room",
+      {
+        roomId,
+        language: getLanguageFromFilename(activeFile.name),
+        isSpectator,
+      },
+      (response) => {
+        if (!isMounted) {
+          return;
+        }
+
+        if (!response?.success) {
+          toast.error(response?.message || "Unable to sync with active room.");
+          return;
+        }
+
+        setUsers(response.activeUsers || []);
+        setIsTeamLeader(Boolean(response.isTeamLeader));
+        setHistory(response.history || []);
+
+        // Sync real-time room code broadcast from server
+        if (typeof response.code === "string" && response.code.trim()) {
+          setCode(response.code);
+          setProjectFiles((prev) =>
+            prev.map((f) => (f.id === activeFileId ? { ...f, content: response.code } : f))
+          );
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      if (socket && socket.connected) {
         socket.emit("leave-room", { roomId });
       }
     };
-  }, [socket, isConnected, roomId, user, navigate]);
+  }, [socket, isConnected, roomId, isSpectator]);
 
   // File Tree Switcher Handler
   const handleSelectFile = (fileId) => {
