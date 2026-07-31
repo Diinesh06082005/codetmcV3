@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: codetmc-server
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: node server/server.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 10000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 120
+      - key: SOCKET_RATE_LIMIT_MAX_EVENTS
+        value: 80
