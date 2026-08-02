@@ -48,19 +48,20 @@ const generateUniqueRoomId = async () => {
 };
 
 export const createRoom = asyncHandler(async (req, res) => {
-  if (req.body?.roomId !== undefined && !sanitizeRoomId(req.body.roomId)) {
-    throw new ApiError(400, "A valid custom room ID is required.");
-  }
+  const rawRoomId = typeof req.body?.roomId === "string" ? req.body.roomId.trim() : "";
+  let roomId = "";
 
-  const requestedRoomId = sanitizeRoomId(req.body?.roomId);
-  const roomId = requestedRoomId || (await generateUniqueRoomId());
-
-  if (requestedRoomId) {
+  if (rawRoomId) {
+    roomId = sanitizeRoomId(rawRoomId);
+    if (!roomId) {
+      throw new ApiError(400, "A valid custom room ID (4-24 letters or numbers) is required.");
+    }
     const existingRoom = await Room.exists({ roomId });
-
     if (existingRoom) {
       throw new ApiError(409, "That room ID is already in use.");
     }
+  } else {
+    roomId = await generateUniqueRoomId();
   }
 
   const user = await User.findById(req.user._id);
@@ -77,6 +78,10 @@ export const createRoom = asyncHandler(async (req, res) => {
       ? new Date(user.roomsCreatedToday.date)
       : null;
 
+    if (currentDate) {
+      currentDate.setHours(0, 0, 0, 0);
+    }
+
     if (!currentDate || currentDate.getTime() !== today.getTime()) {
       user.roomsCreatedToday = {
         date: today,
@@ -84,7 +89,7 @@ export const createRoom = asyncHandler(async (req, res) => {
       };
     }
 
-    const roomLimit = user.roomLimit ?? 4;
+    const roomLimit = user.roomLimit ?? 10;
     if ((user.roomsCreatedToday?.count ?? 0) >= roomLimit) {
       throw new ApiError(403, `Daily room creation limit (${roomLimit}) reached. Please request an upgrade.`);
     }

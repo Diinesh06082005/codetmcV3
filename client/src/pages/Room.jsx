@@ -227,15 +227,17 @@ console.log("Server initialized.");`,
         setLanguage(nextLanguage);
       }
 
-      setActiveCollaborator(updatedBy || "");
+      if (updatedBy && updatedBy !== user?.username) {
+        setActiveCollaborator(updatedBy);
 
-      if (typingIndicatorTimerRef.current) {
-        clearTimeout(typingIndicatorTimerRef.current);
+        if (typingIndicatorTimerRef.current) {
+          clearTimeout(typingIndicatorTimerRef.current);
+        }
+
+        typingIndicatorTimerRef.current = setTimeout(() => {
+          setActiveCollaborator("");
+        }, 1200);
       }
-
-      typingIndicatorTimerRef.current = setTimeout(() => {
-        setActiveCollaborator("");
-      }, 1200);
     };
 
     const handleChatMessage = (message) => {
@@ -374,8 +376,16 @@ console.log("Server initialized.");`,
           }
         }, 3000);
 
+        const cleanRoomId = roomId ? roomId.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "") : "";
+        if (!cleanRoomId) {
+          toast.error("Invalid room ID format.");
+          setIsLoading(false);
+          navigate("/dashboard");
+          return;
+        }
+
         // Ensure user is joined & fetch latest room details
-        const joinResponse = await api.joinRoom({ roomId });
+        const joinResponse = await api.joinRoom({ roomId: cleanRoomId });
 
         if (!isMounted) {
           return;
@@ -428,50 +438,63 @@ console.log("Server initialized.");`,
 
   // 2. Real-Time Socket Connection & Room Event Sync
   useEffect(() => {
-    if (!socket || !isConnected || !roomId) {
+    if (!socket || !roomId) {
       return undefined;
     }
 
     let isMounted = true;
 
-    socket.emit(
-      "join-room",
-      {
-        roomId,
-        language: getLanguageFromFilename(activeFile.name),
-        isSpectator,
-      },
-      (response) => {
-        if (!isMounted) {
-          return;
-        }
-
-        if (!response?.success) {
-          toast.error(response?.message || "Unable to sync with active room.");
-          return;
-        }
-
-        setUsers(response.activeUsers || []);
-        setIsTeamLeader(Boolean(response.isTeamLeader));
-        setHistory(response.history || []);
-
-        // Sync real-time room code broadcast from server
-        if (typeof response.code === "string" && response.code.trim()) {
-          setCode(response.code);
-          setProjectFiles((prev) =>
-            prev.map((f) => (f.id === activeFileId ? { ...f, content: response.code } : f))
-          );
-        }
+    const joinRoomSocket = () => {
+      if (!socket.connected) {
+        return;
       }
-    );
+
+      socket.emit(
+        "join-room",
+        {
+          roomId,
+          language: getLanguageFromFilename(activeFile.name),
+          isSpectator,
+        },
+        (response) => {
+          if (!isMounted) {
+            return;
+          }
+
+          if (!response?.success) {
+            toast.error(response?.message || "Unable to sync with active room.");
+            return;
+          }
+
+          setUsers(response.activeUsers || []);
+          setIsTeamLeader(Boolean(response.isTeamLeader));
+          setHistory(response.history || []);
+
+          // Sync real-time room code broadcast from server
+          if (typeof response.code === "string" && response.code.trim()) {
+            setCode(response.code);
+            setProjectFiles((prev) =>
+              prev.map((f) => (f.id === activeFileId ? { ...f, content: response.code } : f))
+            );
+          }
+        }
+      );
+    };
+
+    if (isConnected) {
+      joinRoomSocket();
+    }
+
+    socket.on("connect", joinRoomSocket);
 
     return () => {
       isMounted = false;
+      socket.off("connect", joinRoomSocket);
       if (socket && socket.connected) {
         socket.emit("leave-room", { roomId });
       }
     };
-  }, [socket, isConnected, roomId, isSpectator]);
+  }, [socket, isConnected, roomId]);
 
   // File Tree Switcher Handler
   const handleSelectFile = (fileId) => {
@@ -547,7 +570,12 @@ console.log("Server initialized.");`,
     }
 
     saveTimerRef.current = setTimeout(() => {
-      socket?.emit(
+      if (!socket || !socket.connected) {
+        setIsSaving(false);
+        return;
+      }
+
+      socket.emit(
         "code-change",
         {
           roomId,
@@ -555,14 +583,13 @@ console.log("Server initialized.");`,
           language,
         },
         (response) => {
-          if (!response?.success) {
-            toast.error(response?.message || "Failed to sync code.");
-          }
-
           setIsSaving(false);
+          if (response && !response.success) {
+            console.error("Code sync warning:", response.message);
+          }
         }
       );
-    }, 260);
+    }, 120);
   };
 
   const handleLanguageChange = (nextLanguage) => {

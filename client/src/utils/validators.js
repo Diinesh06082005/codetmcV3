@@ -17,8 +17,11 @@ export const validateLoginForm = (form) => {
   };
   const errors = {};
 
-  if (!EMAIL_REGEX.test(values.email)) {
-    errors.email = "Enter a valid email address.";
+  const isEmail = EMAIL_REGEX.test(values.email);
+  const isUsername = USERNAME_REGEX.test(values.email);
+
+  if (!values.email || (!isEmail && !isUsername)) {
+    errors.email = "Enter a valid email address or username.";
   }
 
   if (!values.password) {

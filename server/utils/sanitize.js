@@ -26,14 +26,13 @@ export const sanitizeText = (value, options = {}) => {
 };
 
 export const sanitizeCode = (value) => {
-  return validator
-    .stripLow(asString(value).replace(/\u0000/g, ""), true)
-    .slice(0, 200000);
+  return asString(value).replace(/\u0000/g, "").slice(0, 500000);
 };
 
 export const sanitizeRoomId = (value) => {
-  const trimmed = validator.trim(asString(value)).toUpperCase();
-  return ROOM_ID_REGEX.test(trimmed) ? trimmed : "";
+  if (!value || typeof value !== "string") return "";
+  const cleaned = value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+  return ROOM_ID_REGEX.test(cleaned) ? cleaned : "";
 };
 
 export const sanitizeLanguage = (value) => {

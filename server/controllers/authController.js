@@ -48,14 +48,16 @@ export const registerUser = asyncHandler(async (req, res) => {
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
-  const email = validateEmail(req.body?.email);
+  const input = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
 
-  if (!password) {
-    throw new ApiError(400, "Email and password are required.");
+  if (!input || !password) {
+    throw new ApiError(400, "Email/Username and password are required.");
   }
 
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({
+    $or: [{ email: input }, { username: input }],
+  }).select("+password");
 
   if (!user) {
     throw new ApiError(401, "Invalid email or password.");

@@ -7,46 +7,57 @@ import { validateEmail, validatePassword, validateUsername } from "../utils/sani
 
 dotenv.config();
 
-const createAdminUser = async () => {
-  const username = validateUsername(process.env.ADMIN_USERNAME);
-  const email = validateEmail(process.env.ADMIN_EMAIL);
-  const password = validatePassword(process.env.ADMIN_PASSWORD);
+const createOrUpdateAccount = async ({ username, email, password, role }) => {
   const hashedPassword = await hashPassword(password);
   const now = new Date();
 
-  const existingUser = await User.findOne({ email });
-  const usernameConflict = await User.findOne({
-    username,
-    email: { $ne: email },
-  });
-
-  if (usernameConflict) {
-    throw new Error("ADMIN_USERNAME is already assigned to another account.");
+  let user = await User.findOne({ $or: [{ email }, { username }] });
+  if (user) {
+    user.username = username;
+    user.email = email;
+    user.password = hashedPassword;
+    user.role = role;
+    user.lastLoginAt = now;
+    user.lastSeenAt = now;
+    await user.save({ validateBeforeSave: false });
+    console.log(`Updated ${role} account: ${email} (${username})`);
+  } else {
+    user = new User({
+      username,
+      email,
+      password: hashedPassword,
+      role,
+      lastLoginAt: now,
+      lastSeenAt: now,
+    });
+    await user.save({ validateBeforeSave: false });
+    console.log(`Created ${role} account: ${email} (${username})`);
   }
+};
 
-  if (existingUser) {
-    existingUser.username = username;
-    existingUser.password = hashedPassword;
-    existingUser.role = "admin";
-    existingUser.lastLoginAt = now;
-    existingUser.lastSeenAt = now;
-    await existingUser.save({ validateBeforeSave: false });
+const createAdminUser = async () => {
+  const username = validateUsername(process.env.ADMIN_USERNAME || "admin_owner");
+  const email = validateEmail(process.env.ADMIN_EMAIL || "dinesh@gmail.com");
+  const password = validatePassword(process.env.ADMIN_PASSWORD || "StrongPass123");
 
-    console.log(`Updated admin user: ${existingUser.email}`);
-    return;
-  }
+  // Bootstrap primary admin from environment variables
+  await createOrUpdateAccount({ username, email, password, role: "admin" });
 
-  const adminUser = new User({
-    username,
-    email,
-    password: hashedPassword,
+  // Bootstrap demo quick-fill admin account
+  await createOrUpdateAccount({
+    username: "admin_demo",
+    email: "admin@codetmc.com",
+    password: "Admin@123",
     role: "admin",
-    lastLoginAt: now,
-    lastSeenAt: now,
   });
 
-  await adminUser.save({ validateBeforeSave: false });
-  console.log(`Created admin user: ${adminUser.email}`);
+  // Bootstrap demo quick-fill developer account
+  await createOrUpdateAccount({
+    username: "dev_demo",
+    email: "dev@codetmc.com",
+    password: "Dev@123456",
+    role: "user",
+  });
 };
 
 connectDB()

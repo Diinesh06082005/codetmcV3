@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { ExpressPeerServer } from "peer";
+import { WebSocketServer } from "ws";
 import { connectDB } from "./config/db.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
@@ -65,11 +66,36 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Mount ExpressPeerServer directly on Express server so PeerJS runs on single port in production (Render)
+// Mount ExpressPeerServer with isolated WebSocketServer so it never intercepts Socket.IO upgrades
+let peerWss = null;
 const peerServer = ExpressPeerServer(httpServer, {
   debug: false,
   path: "/",
+  createWebSocketServer: (options) => {
+    const { server: _unused, ...rest } = options;
+    peerWss = new WebSocketServer({ ...rest, noServer: true });
+    return peerWss;
+  },
 });
+
+peerServer.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`PeerJS / HTTP Port ${PORT} is already in use.`);
+  } else {
+    console.error("PeerJS Server error:", err.message || err);
+  }
+});
+
+httpServer.on("upgrade", (req, socket, head) => {
+  if (req.url && (req.url.startsWith(PEERJS_PATH) || req.url.includes("peerjs"))) {
+    if (peerWss) {
+      peerWss.handleUpgrade(req, socket, head, (ws) => {
+        peerWss.emit("connection", ws, req);
+      });
+    }
+  }
+});
+
 app.use(PEERJS_PATH, peerServer);
 
 app.use("/api", apiLimiter);

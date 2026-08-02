@@ -251,7 +251,7 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
         code: resolveRoomCode(room),
         language,
         activeUsers: getActiveUsers(roomId),
-        isTeamLeader: room.createdBy.toString() === socket.user.id,
+        isTeamLeader: roomCreatorId === socket.user.id,
         history: room.history || [],
       });
     } catch (error) {
@@ -277,35 +277,32 @@ export const registerSocketHandlers = (io, socket, options = {}) => {
   });
 
   socket.on("code-change", async (payload = {}, callback = () => {}) => {
-    if (!withinSocketRateLimit(socket, maxEvents)) {
-      callback({ success: false, message: "Too many code events. Slow down a bit." });
-      return;
-    }
-
     const state = getSocketRoomState(socket.id);
     const roomId = sanitizeRoomId(payload.roomId || state?.roomId);
     const hasCodeValue = typeof payload.code === "string";
     const code = sanitizeCode(payload.code);
     const language = sanitizeLanguage(payload.language || state?.language) || "javascript";
 
-    if (!state || !roomId || !hasCodeValue) {
-      callback({ success: false, message: "Invalid code sync payload." });
+    if (!roomId || !hasCodeValue) {
+      if (typeof callback === "function") callback({ success: false, message: "Invalid code sync payload." });
       return;
     }
 
-    setSocketRoomState(socket.id, {
-      ...state,
-      language,
-    });
+    if (state) {
+      setSocketRoomState(socket.id, {
+        ...state,
+        language,
+      });
+    }
 
     socket.to(roomId).emit("code-change", {
       code,
       language,
-      updatedBy: socket.user.username,
+      updatedBy: socket.user?.username || "Collaborator",
     });
 
     scheduleRoomSave(roomId, code);
-    callback({ success: true });
+    if (typeof callback === "function") callback({ success: true });
   });
 
   socket.on("save-history", async (payload = {}, callback = () => {}) => {
