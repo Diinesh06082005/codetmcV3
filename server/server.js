@@ -100,6 +100,15 @@ app.use(PEERJS_PATH, peerServer);
 
 app.use("/api", apiLimiter);
 
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "CodeTMC API Server is running.",
+    health: "/api/health",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,

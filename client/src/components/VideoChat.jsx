@@ -141,7 +141,7 @@ const VideoPlayer = ({
           autoPlay
           playsInline
           muted={isLocal}
-          className="w-full h-full object-cover"
+          className={`w-full h-full ${isScreenShare ? "object-contain bg-slate-950" : "object-cover"}`}
         />
       ) : (
         <div className="flex flex-col items-center gap-2 p-6 text-slate-500">
@@ -202,6 +202,7 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
   const [peers, setPeers] = useState({});
   const [mediaState, setMediaState] = useState({ audio: true, video: true });
   const [mediaPermissions, setMediaPermissions] = useState({ audio: true, video: true });
+  const [userMediaStates, setUserMediaStates] = useState({});
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("Connected");
@@ -211,6 +212,11 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
     echoCancellation: true,
     noiseSuppression: true,
   });
+
+  const peerCallsRef = useRef({});
+  const localStreamRef = useRef(null);
+  const camStreamRef = useRef(null);
+  const screenStreamRef = useRef(null);
 
   // Stage expansion & theme state
   const [pinnedStreamId, setPinnedStreamId] = useState("local");
@@ -280,18 +286,33 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
 
     const setupCallsWithStream = (stream) => {
       newPeer.on("call", (call) => {
-        call.answer(stream || undefined);
+        peerCallsRef.current[call.peer] = call;
+        call.answer(localStreamRef.current || stream || undefined);
         call.on("stream", (userVideoStream) => {
           setPeers((prev) => ({ ...prev, [call.peer]: userVideoStream }));
+        });
+        call.on("close", () => {
+          delete peerCallsRef.current[call.peer];
+        });
+        call.on("error", () => {
+          delete peerCallsRef.current[call.peer];
         });
       });
 
       socket.on("user-joined", ({ peerId }) => {
         if (peerId && peerId !== user.id) {
-          const call = newPeer.call(peerId, stream || new MediaStream());
+          const streamToSend = localStreamRef.current || stream || new MediaStream();
+          const call = newPeer.call(peerId, streamToSend);
           if (call) {
+            peerCallsRef.current[peerId] = call;
             call.on("stream", (userVideoStream) => {
               setPeers((prev) => ({ ...prev, [peerId]: userVideoStream }));
+            });
+            call.on("close", () => {
+              delete peerCallsRef.current[peerId];
+            });
+            call.on("error", () => {
+              delete peerCallsRef.current[peerId];
             });
           }
         }
@@ -326,6 +347,8 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
       .getUserMedia(getConstraints())
       .then((stream) => {
         setLocalStream(stream);
+        localStreamRef.current = stream;
+        camStreamRef.current = stream;
         setupCallsWithStream(stream);
       })
       .catch((err) => {
@@ -335,8 +358,8 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
 
     return () => {
       newPeer.destroy();
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, [roomId, socket, user?.id, qualityPreset, selectedDevices, audioEnhancements]);
@@ -355,8 +378,23 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
       }
     });
 
+    socket.on("user-media-toggled", ({ userId, mediaState: remoteMediaState }) => {
+      setUserMediaStates((prev) => ({
+        ...prev,
+        [userId]: remoteMediaState,
+      }));
+
+      if (remoteMediaState?.isScreenShare) {
+        setPinnedStreamId(userId);
+        const remoteUser = activeUsers.find((u) => u.id === userId);
+        const name = remoteUser?.username || "A collaborator";
+        toast.success(`🖥️ @${name} started screen sharing!`);
+      }
+    });
+
     socket.on("user-left", ({ user: leftUser }) => {
-      if (leftUser?.id && peers[leftUser.id]) {
+      if (leftUser?.id) {
+        delete peerCallsRef.current[leftUser.id];
         setPeers((prev) => {
           const newPeers = { ...prev };
           delete newPeers[leftUser.id];
@@ -367,9 +405,10 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
 
     return () => {
       socket.off("media-permission-updated");
+      socket.off("user-media-toggled");
       socket.off("user-left");
     };
-  }, [socket, user, peers]);
+  }, [socket, user, activeUsers]);
 
   useEffect(() => {
     if (localStream) {
@@ -405,31 +444,97 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
     socket?.emit("toggle-media", { roomId, mediaState: newState });
   };
 
+  const replaceVideoTrackForPeers = (newVideoTrack) => {
+    Object.values(peerCallsRef.current).forEach((call) => {
+      if (call && call.peerConnection) {
+        try {
+          const senders = call.peerConnection.getSenders();
+          const videoSender =
+            senders.find((s) => s.track && s.track.kind === "video") ||
+            senders.find((s) => s.kind === "video");
+
+          if (videoSender) {
+            videoSender.replaceTrack(newVideoTrack || null);
+          } else if (newVideoTrack) {
+            call.peerConnection.addTrack(newVideoTrack);
+          }
+        } catch (err) {
+          console.warn("Error replacing video track for peer:", err);
+        }
+      }
+    });
+  };
+
+  const stopScreenSharing = async () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = null;
+    }
+
+    let camStream = camStreamRef.current;
+
+    if (!camStream || !camStream.getVideoTracks().some((t) => t.readyState === "live")) {
+      try {
+        camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        camStreamRef.current = camStream;
+      } catch (err) {
+        console.warn("Could not re-acquire camera stream:", err);
+      }
+    }
+
+    const camVideoTrack = camStream?.getVideoTracks()[0] || null;
+    replaceVideoTrackForPeers(camVideoTrack);
+
+    if (camStream) {
+      setLocalStream(camStream);
+      localStreamRef.current = camStream;
+    }
+
+    setIsScreenSharing(false);
+    socket?.emit("toggle-media", {
+      roomId,
+      mediaState: { ...mediaState, isScreenShare: false },
+    });
+    toast.success("Stopped screen sharing.");
+  };
+
   const toggleScreenShare = async () => {
     if (isScreenSharing) {
-      // Revert to camera stream
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
-        .then((camStream) => {
-          setLocalStream(camStream);
-          setIsScreenSharing(false);
-          toast.success("Stopped screen sharing.");
-        });
+      await stopScreenSharing();
     } else {
       try {
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: true,
         });
+
+        if (localStream && !isScreenSharing) {
+          camStreamRef.current = localStream;
+        }
+
+        screenStreamRef.current = screenStream;
+        const screenVideoTrack = screenStream.getVideoTracks()[0];
+
+        // Instantly transmit screen track to all connected P2P WebRTC peers!
+        replaceVideoTrackForPeers(screenVideoTrack);
+
         setLocalStream(screenStream);
+        localStreamRef.current = screenStream;
         setIsScreenSharing(true);
         setPinnedStreamId("local");
 
-        screenStream.getVideoTracks()[0].onended = () => {
-          setIsScreenSharing(false);
+        socket?.emit("toggle-media", {
+          roomId,
+          mediaState: { ...mediaState, isScreenShare: true },
+        });
+
+        screenVideoTrack.onended = () => {
+          stopScreenSharing();
         };
+
         toast.success("Sharing screen with room. Pinned to main stage!");
       } catch (err) {
+        console.error("Screen share error:", err);
         toast.error("Could not share screen.");
       }
     }
@@ -466,12 +571,13 @@ const VideoChat = ({ socket, roomId, user, isTeamLeader, activeUsers, isSpectato
 
   Object.keys(peers).forEach((peerId) => {
     const remoteUser = activeUsers.find((u) => u.id === peerId);
+    const remoteMedia = userMediaStates[peerId] || {};
     allStreamList.push({
       id: peerId,
       stream: peers[peerId],
       isLocal: false,
       username: remoteUser?.username || "Developer",
-      isScreenShare: false,
+      isScreenShare: Boolean(remoteMedia.isScreenShare),
     });
   });
 

@@ -7,7 +7,7 @@
 ### **Part 1: The Problem — Why CodeTMC is Needed**
 > *"Every software team today faces a common, painful reality: **tool fragmentation**. When two developers sit down to pair-program, conduct a technical interview, or perform a live code review remotely, they are forced to juggle 4 or 5 separate applications at once. 
 > 
-> You have VS Code open for editing, Zoom or Google Meet running in the background consuming massive CPU and RAM, GitHub open in a browser tab to check commit history, Slack for voice notes, and a separate online terminal to test execution. Context switching breaks developer flow, causes communication lags, and creates security risks. 
+> You have VS Code open for editing, Zoom or Google Meet running in the background consuming massive CPU and RAM, GitHub open in a browser tab to check commit history, Slack for voice notes, and a separate online terminal to test execution. Context switching breaks developer flow, causes communication lags,     and creates security risks. 
 > 
 > **We built CodeTMC to eliminate this friction entirely.**"*
 
